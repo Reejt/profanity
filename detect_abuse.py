@@ -25,6 +25,8 @@ DEFAULT_MODEL = "unitary/toxic-bert"
 # This is used to decide whether a positive score should be considered abusive.
 NON_ABUSIVE_LABELS = {"clean", "non_toxic", "non-toxic", "not_toxic", "not toxic", "neutral", "none"}
 
+_DETECTOR_CACHE = {}
+
 
 def get_detector(model_name: str = DEFAULT_MODEL, device: int = -1):
     """
@@ -32,6 +34,47 @@ def get_detector(model_name: str = DEFAULT_MODEL, device: int = -1):
     device = -1 runs on CPU; set device=0 to use first GPU if available.
     """
     return pipeline("text-classification", model=model_name, return_all_scores=True, device=device)
+
+
+def detect_abuse(text: str, model_name: str = DEFAULT_MODEL, threshold: float = 0.65, device: int = -1) -> Dict:
+    """
+    Score a single text and return the first structured result.
+    """
+    cache_key = (model_name, device)
+    detector = _DETECTOR_CACHE.get(cache_key)
+    if detector is None:
+        detector = get_detector(model_name, device=device)
+        _DETECTOR_CACHE[cache_key] = detector
+
+    return analyze_texts(detector, [text], threshold=threshold, batch_size=1)[0]
+
+
+def _normalize_prediction(pred) -> List[Dict]:
+    """
+    Normalize a single pipeline result into a list of {label, score} dicts.
+
+    Different transformers versions can return either:
+      - a dict for one label
+      - a list of dicts for one text
+      - a nested list when batching is involved
+    """
+    if isinstance(pred, dict):
+        if "label" in pred and "score" in pred:
+            return [pred]
+        raise TypeError(f"Unexpected prediction dict shape: {pred!r}")
+
+    if isinstance(pred, list):
+        if not pred:
+            return []
+        if isinstance(pred[0], dict):
+            return pred
+        if isinstance(pred[0], list):
+            flattened = []
+            for item in pred:
+                flattened.extend(_normalize_prediction(item))
+            return flattened
+
+    raise TypeError(f"Unexpected prediction type: {type(pred)!r} -> {pred!r}")
 
 
 def analyze_texts(detector, texts: List[str], threshold: float = 0.65, batch_size: int = 8) -> List[Dict]:
@@ -53,7 +96,7 @@ def analyze_texts(detector, texts: List[str], threshold: float = 0.65, batch_siz
         # preds is a list (per text) of list(dict(label, score))
         for text, pred in zip(batch, preds):
             # Normalize labels and scores
-            all_scores = [{"label": p["label"], "score": float(p["score"])} for p in pred]
+            all_scores = [{"label": p["label"], "score": float(p["score"])} for p in _normalize_prediction(pred)]
             # Determine top label and max score
             top = max(all_scores, key=lambda x: x["score"])
             # Consider any label not in NON_ABUSIVE_LABELS and above threshold as matched

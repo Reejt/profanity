@@ -31,7 +31,8 @@ class AbuseDetectorUI {
             });
             if (!response.ok) throw new Error('Network error');
             const data = await response.json();
-            resultDiv.textContent = 'Result: ' + data.result;
+            const verdict = data.abusive ? 'Abusive' : 'Not abusive';
+            resultDiv.textContent = `Result: ${verdict} | Top label: ${data.top_label} (${data.max_score.toFixed(3)})`;
         } catch (err) {
             resultDiv.className = 'result error';
             resultDiv.textContent = 'Error contacting backend.';

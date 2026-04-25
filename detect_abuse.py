@@ -101,6 +101,10 @@ def analyze_texts(detector, texts: List[str], threshold: float = 0.65, batch_siz
             top = max(all_scores, key=lambda x: x["score"])
             # Consider any label not in NON_ABUSIVE_LABELS and above threshold as matched
             matched = [p for p in all_scores if (p["score"] >= threshold and p["label"].lower() not in NON_ABUSIVE_LABELS)]
+
+            if "*" in text and not any(p["label"] == "*" for p in matched):
+                matched.append({"label": "*", "score": 1.0})
+
             abusive = len(matched) > 0
             results.append(
                 {

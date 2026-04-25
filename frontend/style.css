@@ -40,6 +40,29 @@ body {
 .button:hover {
     background: #005fa3;
 }
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.button.mic {
+    background: #00aa66;
+    color: #111;
+}
+.button.mic:hover {
+    background: #008f56;
+}
+.button.mic.listening {
+    background: #d9332b;
+    color: #fff;
+    animation: pulse 1s ease-in-out infinite;
+}
+.voice-status {
+    margin-top: 8px;
+    min-height: 20px;
+    font-size: 0.95rem;
+    color: #666;
+}
 .result {
     margin-top: 20px;
     font-weight: bold;
@@ -48,4 +71,10 @@ body {
 .error {
     color: #d70022;
     font-weight: bold;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
 }

@@ -46,6 +46,13 @@ def detect_abuse(text: str, model_name: str = DEFAULT_MODEL, threshold: float = 
         detector = get_detector(model_name, device=device)
         _DETECTOR_CACHE[cache_key] = detector
 
+    return detect_abuse_with_detector(detector, text, threshold=threshold)
+
+
+def detect_abuse_with_detector(detector, text: str, threshold: float = 0.65) -> Dict:
+    """
+    Score a single text using an already-initialized detector pipeline.
+    """
     return analyze_texts(detector, [text], threshold=threshold, batch_size=1)[0]
 
 
